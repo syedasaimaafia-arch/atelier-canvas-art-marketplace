@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATELIER CANVAS | Elite Fine Art & Painting Marketplace</title>
+  <meta name="description" content="Discover and collect museum-grade original oil and acrylic paintings. Powered by Next.js, FastAPI art valuation, Supabase, Drizzle ORM, and Google Auth.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            gallery: {
+              950: '#07080b',
+              900: '#0c0e14',
+              850: '#12151f',
+              800: '#171b28',
+              700: '#23293c',
+              gold: '#d4af37',
+              'gold-light': '#fcf6ba',
+              bronze: '#b87333',
+            }
+          },
+          fontFamily: {
+            serif: ['"Playfair Display"', 'Georgia', 'serif'],
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif']
+          },
+          boxShadow: {
+            'glow-gold': '0 0 35px -5px rgba(212, 175, 55, 0.3)',
+            'canvas-depth': '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 1px 1px rgba(255, 255, 255, 0.1)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #07080b;
+      color: #e2e8f0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+    }
+    .text-gold-gradient {
+      background: linear-gradient(135deg, #d4af37 0%, #fff8dc 40%, #b87333 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .spotlight-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(212, 175, 55, 0.12) 0%, rgba(7, 8, 11, 0) 70%);
+      pointer-events: none;
+    }
+    .canvas-frame {
+      box-shadow: 
+        0 30px 60px -12px rgba(0, 0, 0, 0.95),
+        0 0 0 10px #111319,
+        0 0 0 12px rgba(212, 175, 55, 0.4),
+        0 0 30px rgba(212, 175, 55, 0.25);
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #07080b; }
+    ::-webkit-scrollbar-thumb { background: #23293c; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #d4af37; }
+  </style>
+</head>
+<body class="antialiased selection:bg-[#d4af37] selection:text-black">
+
+  <!-- Spotlight Ambient Background -->
+  <div class="spotlight-glow top-0 left-1/2 -translate-x-1/2"></div>
+  <div class="spotlight-glow top-[800px] -right-48"></div>
+
+  <!-- NAVIGATION HEADER -->
+  <header class="sticky top-0 z-40 w-full border-b border-white/10 bg-[#07080b]/85 backdrop-blur-xl">
+    <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+      <a href="#" class="group flex items-center space-x-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-[#d4af37]/40 bg-gradient-to-br from-[#1d2232] to-[#0c0e14] shadow-glow-gold transition-all duration-300 group-hover:scale-105">
+          <span class="font-serif text-xl font-bold text-[#d4af37]">A</span>
+        </div>
+        <div>
+          <span className="font-serif" style="font-family: 'Playfair Display', serif;" class="font-serif text-xl tracking-widest text-white transition-colors group-hover:text-[#d4af37]">ATELIER</span>
+          <span class="ml-1 text-xs tracking-widest text-[#d4af37]/90 uppercase font-semibold">Canvas</span>
+        </div>
+      </a>
+
+      <!-- Desktop Nav -->
+      <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-300">
+        <a href="#gallery" class="flex items-center space-x-2 hover:text-[#d4af37] transition-colors">
+          <i data-lucide="palette" class="h-4 w-4"></i>
+          <span>Curated Gallery</span>
+        </a>
+        <a href="#room-visualizer" class="flex items-center space-x-2 hover:text-[#d4af37] transition-colors">
+          <i data-lucide="eye" class="h-4 w-4"></i>
+          <span>Room Visualizer</span>
+        </a>
+        <a href="#valuation" class="flex items-center space-x-2 hover:text-[#d4af37] transition-colors">
+          <i data-lucide="sparkles" class="h-4 w-4"></i>
+          <span>AI Valuation</span>
+        </a>
+        <button onclick="openSellModal()" class="flex items-center space-x-2 hover:text-[#d4af37] transition-colors">
+          <i data-lucide="shield-check" class="h-4 w-4"></i>
+          <span>Sell Artwork</span>
+        </button>
+      </nav>
+
+      <!-- Auth & Actions -->
+      <div class="flex items-center space-x-4">
+        <button onclick="openCartModal()" class="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:border-[#d4af37]/50 hover:text-[#d4af37] transition-colors">
+          <i data-lucide="shopping-bag" class="h-5 w-5"></i>
+          <span id="cartBadge" class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d4af37] text-[10px] font-bold text-black">1</span>
+        </button>
+
+        <button onclick="openAuthModal()" id="googleAuthBtn" class="flex items-center space-x-2.5 rounded-xl border border-[#d4af37]/50 bg-gradient-to-r from-[#d4af37]/20 to-[#b87333]/20 px-5 py-2.5 text-xs font-semibold text-white uppercase tracking-wider transition-all duration-300 hover:border-[#d4af37] hover:bg-[#d4af37]/30 hover:shadow-glow-gold">
+          <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24">
+            <path d="M12.24 10.285V13.4h6.887c-.58 3.2-3.37 5.568-6.887 5.568-4.14 0-7.5-3.36-7.5-7.5s3.36-7.5 7.5-7.5c1.86 0 3.55.68 4.86 1.8l2.36-2.36C17.5 1.8 15.02 1 12.24 1 6.12 1 1.14 5.98 1.14 12.12s4.98 11.12 11.1 11.12c6.38 0 10.62-4.48 10.62-10.8 0-.72-.08-1.42-.2-2.16H12.24z"/>
+          </svg>
+          <span id="userAuthLabel">Sign In with Google</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section class="relative mx-auto max-w-7xl px-6 pt-12 pb-24 md:pt-20 md:pb-32">
+    <div class="grid grid-cols-1 items-center gap-16 lg:grid-cols-12">
+      
+      <!-- Hero Copy -->
+      <div class="lg:col-span-7 space-y-8">
+        <div class="inline-flex items-center space-x-2 rounded-full border border-[#d4af37]/30 bg-[#12151f] px-4 py-1.5 backdrop-blur-xl">
+          <i data-lucide="sparkles" class="h-4 w-4 text-[#d4af37]"></i>
+          <span class="text-xs font-semibold uppercase tracking-wider text-[#d4af37]">Museum-Grade Fine Art Marketplace</span>
+        </div>
+
+        <h1 class="font-serif text-4xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-7xl leading-[1.1]">
+          Where Masterpiece <br>
+          <span class="text-gold-gradient">Oil & Acrylic</span> Meets Collector Depth.
+        </h1>
+
+        <p class="max-w-2xl text-base leading-relaxed text-slate-300 md:text-lg">
+          Acquire certified original oil and acrylic paintings from international master artists. Verified with cryptographic provenance on Supabase, living room wall scale simulation, and FastAPI valuation algorithms.
+        </p>
+
+        <div class="flex flex-wrap gap-4 pt-2">
+          <a href="#gallery" class="flex items-center space-x-3 rounded-2xl bg-gradient-to-r from-[#d4af37] via-[#fcf6ba] to-[#b87333] px-8 py-4 text-sm font-bold tracking-wider text-black transition-all hover:scale-105 shadow-glow-gold">
+            <span>Explore Curated Gallery</span>
+            <i data-lucide="arrow-right" class="h-4 w-4"></i>
+          </a>
+          <a href="#room-visualizer" class="flex items-center space-x-2.5 rounded-2xl border border-white/15 bg-white/5 px-7 py-4 text-sm font-semibold text-white backdrop-blur-xl transition-all hover:border-[#d4af37]/60 hover:bg-white/10">
+            <i data-lucide="eye" class="h-4 w-4 text-[#d4af37]"></i>
+            <span>Virtual Room Simulator</span>
+          </a>
+        </div>
+
+        <!-- Metrics -->
+        <div class="grid grid-cols-3 gap-6 border-t border-white/10 pt-8 max-w-xl">
+          <div>
+            <p class="font-serif text-2xl font-bold text-white">$4.8M+</p>
+            <p class="text-xs text-slate-400">Masterwork Sales Volume</p>
+          </div>
+          <div>
+            <p class="font-serif text-2xl font-bold text-white">100%</p>
+            <p class="text-xs text-slate-400">Authenticity Guarantee</p>
+          </div>
+          <div>
+            <p class="font-serif text-2xl font-bold text-white">FastAPI</p>
+            <p class="text-xs text-slate-400">AI Valuation Engine</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero Featured 3D Masterwork Card -->
+      <div class="lg:col-span-5">
+        <div class="relative group mx-auto max-w-md overflow-hidden rounded-3xl border border-[#d4af37]/40 bg-[#12151f] p-4 shadow-canvas-depth transition-all duration-700 hover:border-[#d4af37]">
+          
+          <div class="relative aspect-[3/4] overflow-hidden rounded-2xl bg-black">
+            <img src="./frontend/public/artworks/art1.jpg" alt="Celestial Nebulae" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105">
+            <div class="absolute top-4 left-4 rounded-lg bg-black/70 px-3 py-1 text-[10px] font-bold tracking-widest text-[#d4af37] backdrop-blur-md uppercase">
+              Featured Masterwork
+            </div>
+          </div>
+
+          <div class="mt-4 p-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-400">Evelyn Thorne</span>
+              <span class="text-xs font-mono text-[#d4af37]">48 x 36 in</span>
+            </div>
+            <h3 class="font-serif text-xl font-bold text-white mt-1">Celestial Nebulae & Burnished Gold</h3>
+            
+            <div class="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
+              <div>
+                <span class="text-[10px] text-slate-400 uppercase">Acquisition Price</span>
+                <p class="font-serif text-xl font-extrabold text-gold-gradient">$8,400</p>
+              </div>
+              <button onclick="openRoomVisualizerModal(0)" class="flex items-center space-x-2 rounded-xl border border-[#d4af37]/50 bg-[#d4af37]/10 px-4 py-2 text-xs font-semibold text-[#d4af37] hover:bg-[#d4af37] hover:text-black transition-colors">
+                <i data-lucide="eye" class="h-3.5 w-3.5"></i>
+                <span>View in Room</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY SECTION -->
+  <section id="gallery" class="border-t border-white/10 bg-[#0c0e14] py-24">
+    <div class="mx-auto max-w-7xl px-6">
+      
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+        <div>
+          <span class="text-xs font-semibold uppercase tracking-widest text-[#d4af37]">Curated Selection</span>
+          <h2 class="font-serif text-3xl font-bold text-white sm:text-4xl mt-1">Available Masterwork Paintings</h2>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="mt-6 md:mt-0 flex flex-wrap gap-2">
+          <button onclick="filterMedium('All')" id="btn-All" class="filter-btn rounded-xl px-4 py-2 text-xs font-semibold bg-[#d4af37] text-black shadow-glow-gold">All</button>
+          <button onclick="filterMedium('Oil')" id="btn-Oil" class="filter-btn rounded-xl px-4 py-2 text-xs font-semibold border border-white/10 bg-[#12151f] text-slate-300 hover:border-white/30">Oil on Canvas</button>
+          <button onclick="filterMedium('Acrylic')" id="btn-Acrylic" class="filter-btn rounded-xl px-4 py-2 text-xs font-semibold border border-white/10 bg-[#12151f] text-slate-300 hover:border-white/30">Acrylic</button>
+          <button onclick="filterMedium('Charcoal')" id="btn-Charcoal" class="filter-btn rounded-xl px-4 py-2 text-xs font-semibold border border-white/10 bg-[#12151f] text-slate-300 hover:border-white/30">Charcoal</button>
+        </div>
+      </div>
+
+      <!-- Controls & Search -->
+      <div class="mb-8 flex flex-col md:flex-row items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#12151f] p-4">
+        <div class="relative w-full md:w-96">
+          <i data-lucide="search" class="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+          <input type="text" id="searchInput" onkeyup="renderGallery()" placeholder="Search painting title or artist..." class="w-full rounded-xl border border-white/10 bg-[#07080b] pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:border-[#d4af37] focus:outline-none">
+        </div>
+
+        <div class="flex items-center space-x-4 w-full md:w-auto justify-between">
+          <div class="flex items-center space-x-2 text-xs text-slate-400">
+            <span>Max Price:</span>
+            <input type="range" id="priceRange" min="3000" max="15000" step="500" value="15000" oninput="renderGallery()" class="w-28 accent-[#d4af37]">
+            <span id="priceLabel" class="font-mono text-[#d4af37] font-bold">$15,000</span>
+          </div>
+
+          <select id="sortSelect" onchange="renderGallery()" class="rounded-xl border border-white/10 bg-[#07080b] px-3 py-2 text-xs text-white focus:border-[#d4af37] focus:outline-none">
+            <option value="featured">Featured</option>
+            <option value="low-high">Price: Low to High</option>
+            <option value="high-low">Price: High to Low</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Artwork Grid -->
+      <div id="artworkGrid" class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <!-- Rendered via JavaScript -->
+      </div>
+    </div>
+  </section>
+
+  <!-- STANDALONE ROOM VISUALIZER SECTION -->
+  <section id="room-visualizer" class="py-24 bg-[#07080b]">
+    <div class="mx-auto max-w-7xl px-6">
+      
+      <div class="border-b border-white/10 pb-6 mb-8 flex flex-col md:flex-row md:items-center justify-between">
+        <div>
+          <div class="flex items-center space-x-2 text-xs font-semibold text-[#d4af37] uppercase tracking-widest">
+            <i data-lucide="eye" class="h-4 w-4"></i>
+            <span>Interactive Interior Simulator</span>
+          </div>
+          <h2 class="font-serif text-3xl font-bold text-white sm:text-4xl mt-1">Virtual Living Room Wall Scale Visualizer</h2>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Stage Canvas -->
+        <div className="lg:col-span-8 flex flex-col h-[580px] overflow-hidden rounded-3xl border border-[#d4af37]/40 bg-[#0c0e14] shadow-2xl relative">
+          <div id="visWallStage" class="relative flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-[#12141c] to-[#07080b] transition-colors duration-500">
+            
+            <div class="absolute top-0 h-64 w-96 rounded-full bg-gradient-radial from-amber-100/10 via-transparent to-transparent pointer-events-none"></div>
+
+            <!-- Canvas Frame -->
+            <div id="visArtworkFrame" class="relative z-10 canvas-frame transition-all duration-500 w-[55%] max-w-[420px]">
+              <img id="visArtworkImg" src="./frontend/public/artworks/art1.jpg" alt="Selected Painting" class="w-full h-auto object-cover rounded-sm shadow-2xl">
+              
+              <div class="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                <div class="h-2 w-12 rounded-full bg-[#d4af37]/80 shadow-[0_0_15px_#d4af37]"></div>
+                <div class="h-8 w-0.5 bg-gradient-to-b from-[#d4af37]/60 to-transparent"></div>
+              </div>
+            </div>
+
+            <!-- Sofa Benchmark -->
+            <div class="mt-10 w-full max-w-lg z-10 flex flex-col items-center">
+              <div class="w-full h-20 rounded-t-3xl border-t border-white/10 bg-[#1e2330] shadow-2xl flex items-center justify-center">
+                <span class="text-[10px] tracking-widest text-slate-400 uppercase font-semibold">90" Velvet Sofa (Scale Benchmark)</span>
+              </div>
+              <div class="w-full h-3 bg-black/60 rounded-b-lg"></div>
+            </div>
+
+            <div class="absolute bottom-0 inset-x-0 h-12 bg-gradient-to-t from-black/80 to-transparent"></div>
+          </div>
+
+          <div class="border-t border-white/10 bg-[#12151f] px-6 py-3 flex items-center justify-between text-xs text-slate-300">
+            <span>Painting Title: <strong id="visTitleLabel" class="text-white">Celestial Nebulae & Burnished Gold</strong></span>
+            <span>Dimensions: <strong id="visDimLabel" class="text-[#d4af37] font-mono">48 x 36 in</strong></span>
+          </div>
+        </div>
+
+        <!-- Controls Sidebar -->
+        <div class="lg:col-span-4 space-y-6">
+          <div class="rounded-3xl border border-white/10 bg-[#12151f] p-6 space-y-4">
+            <h3 class="font-serif text-base font-bold text-white uppercase tracking-wider">Select Painting to Hang</h3>
+            <div class="grid grid-cols-2 gap-3" id="visArtworkThumbs">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <div class="rounded-3xl border border-white/10 bg-[#12151f] p-6 space-y-4">
+            <h3 class="font-serif text-base font-bold text-white uppercase tracking-wider">Wall Finish Interior</h3>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="setWallTheme('dark')" class="rounded-xl p-3 text-xs font-semibold border border-[#d4af37] bg-[#d4af37]/20 text-[#d4af37]">Dark Velvet</button>
+              <button onclick="setWallTheme('grey')" class="rounded-xl p-3 text-xs font-semibold border border-white/10 bg-[#0c0e14] text-slate-300">Concrete Loft</button>
+              <button onclick="setWallTheme('emerald')" class="rounded-xl p-3 text-xs font-semibold border border-white/10 bg-[#0c0e14] text-slate-300">Emerald Salon</button>
+              <button onclick="setWallTheme('brick')" class="rounded-xl p-3 text-xs font-semibold border border-white/10 bg-[#0c0e14] text-slate-300">Terracotta</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI VALUATION SECTION -->
+  <section id="valuation" class="py-24 mx-auto max-w-7xl px-6">
+    <div class="relative overflow-hidden rounded-3xl border border-[#d4af37]/40 bg-[#0c0e14] p-8 shadow-2xl">
+      <div class="flex flex-col lg:flex-row gap-12">
+        
+        <!-- Form -->
+        <div class="lg:w-1/2 space-y-6">
+          <div class="flex items-center space-x-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4af37]/20 text-[#d4af37]">
+              <i data-lucide="sparkles" class="h-5 w-5"></i>
+            </div>
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-widest text-[#d4af37]">FastAPI Art Intelligence Engine</span>
+              <h2 class="font-serif text-2xl font-bold text-white">Fine Art AI Price Estimator</h2>
+            </div>
+          </div>
+
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Algorithmic pricing based on canvas area, medium demand index, style rarity, and artist solo exhibition provenance.
+          </p>
+
+          <form onsubmit="calculateValuation(event)" class="grid grid-cols-2 gap-4 pt-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Medium</label>
+              <select id="valMedium" class="w-full rounded-xl border border-white/10 bg-[#12151f] px-3.5 py-2.5 text-xs text-white focus:border-[#d4af37] focus:outline-none">
+                <option value="Oil">Oil on Canvas</option>
+                <option value="Acrylic">Acrylic on Canvas</option>
+                <option value="Watercolor">Watercolor</option>
+                <option value="Charcoal">Charcoal & Mixed Media</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Style</label>
+              <select id="valStyle" class="w-full rounded-xl border border-white/10 bg-[#12151f] px-3.5 py-2.5 text-xs text-white focus:border-[#d4af37] focus:outline-none">
+                <option value="Impressionism">Impressionism</option>
+                <option value="Abstract">Abstract & Gold Impasto</option>
+                <option value="Surrealism">Surrealism</option>
+                <option value="Expressionism">Expressionism</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Width (Inches)</label>
+              <input type="number" id="valWidth" value="48" class="w-full rounded-xl border border-white/10 bg-[#12151f] px-3.5 py-2.5 text-xs text-white focus:border-[#d4af37] focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Height (Inches)</label>
+              <input type="number" id="valHeight" value="36" class="w-full rounded-xl border border-white/10 bg-[#12151f] px-3.5 py-2.5 text-xs text-white focus:border-[#d4af37] focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Solo Exhibitions</label>
+              <input type="number" id="valExhibitions" value="12" class="w-full rounded-xl border border-white/10 bg-[#12151f] px-3.5 py-2.5 text-xs text-white focus:border-[#d4af37] focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Year Created</label>
+              <input type="number" id="valYear" value="2025" class="w-full rounded-xl border border-white/10 bg-[#12151f] px-3.5 py-2.5 text-xs text-white focus:border-[#d4af37] focus:outline-none">
+            </div>
+
+            <div class="col-span-2 pt-2">
+              <button type="submit" class="flex w-full items-center justify-center space-x-2 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#b87333] py-3.5 text-xs font-bold uppercase tracking-wider text-black shadow-glow-gold hover:brightness-110">
+                <i data-lucide="calculator" class="h-4 w-4"></i>
+                <span>Run Valuation Calculation</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Result -->
+        <div id="valResultContainer" class="lg:w-1/2 flex flex-col justify-center rounded-2xl border border-white/10 bg-[#12151f] p-6">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-white/10 bg-[#07080b] pt-16 pb-12">
+    <div class="mx-auto max-w-7xl px-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-400">
+      <div class="flex items-center space-x-3">
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d4af37]/40 bg-[#1d2232]">
+          <span class="font-serif font-bold text-[#d4af37]">A</span>
+        </div>
+        <span class="font-serif text-base text-white">ATELIER CANVAS</span>
+      </div>
+      <p class="mt-4 md:mt-0">© 2026 Atelier Canvas Fine Art Inc. Powered by Next.js, FastAPI, Supabase & Google Auth.</p>
+    </div>
+  </footer>
+
+  <!-- MODALS CONTAINER -->
+  <div id="modalOverlay" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <!-- Dynamic Modal Content -->
+    <div id="modalContent" class="w-full max-w-2xl rounded-3xl border border-[#d4af37]/40 bg-[#0c0e14] p-8 shadow-2xl relative">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT APP LOGIC -->
+  <script>
+    // Masterwork Dataset
+    const ARTWORKS = [
+      {
+        id: 0,
+        title: "Celestial Nebulae & Burnished Gold",
+        artist: "Evelyn Thorne",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+        medium: "Oil",
+        style: "Abstract",
+        dimensions: "48 x 36 in (122 x 91 cm)",
+        year: 2025,
+        price: 8400,
+        image: "./frontend/public/artworks/art1.jpg",
+        cert: "0x89AF41D",
+        provenance: ["Acquired directly from Artist Studio, London (2025)", "Exhibited at Saatchi Gallery Summer Curation"],
+        desc: "Layered oil impasto combined with 24k burnished gold leaf on linen. Explores cosmic fluid dynamics."
+      },
+      {
+        id: 1,
+        title: "Venetian Twilight Canal Reflection",
+        artist: "Marcus Vance",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80",
+        medium: "Oil",
+        style: "Impressionism",
+        dimensions: "40 x 30 in (101 x 76 cm)",
+        year: 2024,
+        price: 6200,
+        image: "./frontend/public/artworks/art2.jpg",
+        cert: "0x43B9E02",
+        provenance: ["Galleria d'Arte Moderna, Florence (2024)", "Private Collection, Milan"],
+        desc: "Palette knife impressionism portraying warm street lamps casting cadmium orange reflections on Venice waters."
+      },
+      {
+        id: 2,
+        title: "Melancholia in Charcoal & Obsidian",
+        artist: "Sora Takahashi",
+        avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80",
+        medium: "Charcoal",
+        style: "Expressionism",
+        dimensions: "60 x 40 in (152 x 101 cm)",
+        year: 2026,
+        price: 11500,
+        image: "./frontend/public/artworks/art3.jpg",
+        cert: "0x77C11A3",
+        provenance: ["Tokyo Biennial Selection (2026)", "Atelier Masterpiece Record #88"],
+        desc: "Monumental expressive portrait blending raw charcoal linework with deep crimson oil glazes."
+      },
+      {
+        id: 3,
+        title: "Luminescent Botanical Sculpture",
+        artist: "Astrid Lindholm",
+        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80",
+        medium: "Acrylic",
+        style: "Surrealism",
+        dimensions: "36 x 36 in (91 x 91 cm)",
+        year: 2025,
+        price: 5900,
+        image: "./frontend/public/artworks/art4.jpg",
+        cert: "0x91F33B9",
+        provenance: ["Nordic Contemporary Fine Art Triennial (2025)"],
+        desc: "Dreamlike surrealist composition fusing glowing bioluminescent flora with classical marble sculpture."
+      }
+    ];
+
+    let currentFilterMedium = 'All';
+    let selectedVisArtwork = ARTWORKS[0];
+
+    function renderGallery() {
+      const grid = document.getElementById('artworkGrid');
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const maxP = Number(document.getElementById('priceRange').value);
+      const sort = document.getElementById('sortSelect').value;
+
+      document.getElementById('priceLabel').innerText = `$${maxP.toLocaleString()}`;
+
+      let filtered = ARTWORKS.filter(item => {
+        const matchSearch = item.title.toLowerCase().includes(search) || item.artist.toLowerCase().includes(search);
+        const matchMedium = currentFilterMedium === 'All' || item.medium === currentFilterMedium;
+        const matchPrice = item.price <= maxP;
+        return matchSearch && matchMedium && matchPrice;
+      });
+
+      if (sort === 'low-high') filtered.sort((a,b) => a.price - b.price);
+      if (sort === 'high-low') filtered.sort((a,b) => b.price - a.price);
+
+      grid.innerHTML = filtered.map(item => `
+        <div class="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#12151f] transition-all duration-500 hover:-translate-y-2 hover:border-[#d4af37]/60 hover:shadow-canvas-depth">
+          <div class="relative aspect-[4/5] w-full overflow-hidden bg-[#0a0c12]">
+            <img src="${item.image}" alt="${item.title}" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105">
+            <div class="absolute top-3 left-3 flex gap-1.5">
+              <span class="rounded-md border border-white/20 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-white uppercase">${item.medium}</span>
+              <span class="rounded-md border border-[#d4af37]/30 bg-[#1d2232]/80 px-2.5 py-1 text-[10px] font-semibold text-[#d4af37] uppercase">${item.style}</span>
+            </div>
+            
+            <div class="absolute bottom-3 inset-x-3 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onclick="openRoomVisualizerModal(${item.id})" class="flex items-center space-x-1.5 rounded-lg border border-[#d4af37]/40 bg-black/90 px-3 py-1.5 text-xs font-semibold text-white hover:text-[#d4af37]">
+                <i data-lucide="eye" class="h-3.5 w-3.5 text-[#d4af37]"></i>
+                <span>View in Room</span>
+              </button>
+              <button onclick="openArtworkDetailModal(${item.id})" class="rounded-lg bg-[#d4af37] px-3 py-1.5 text-xs font-bold text-black">
+                Details
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-1 flex-col p-5">
+            <div class="flex items-center space-x-2 text-xs text-slate-300">
+              <img src="${item.avatar}" class="h-5 w-5 rounded-full object-cover">
+              <span>${item.artist}</span>
+            </div>
+            <h3 class="font-serif text-lg font-bold text-white mt-2 line-clamp-1 group-hover:text-[#d4af37] transition-colors">${item.title}</h3>
+            <div class="mt-4 flex items-end justify-between border-t border-white/10 pt-3">
+              <span class="text-xs font-mono text-slate-400">${item.dimensions}</span>
+              <span class="font-serif text-lg font-extrabold text-gold-gradient">$${item.price.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function filterMedium(medium) {
+      currentFilterMedium = medium;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.className = "filter-btn rounded-xl px-4 py-2 text-xs font-semibold border border-white/10 bg-[#12151f] text-slate-300";
+      });
+      document.getElementById(`btn-${medium}`).className = "filter-btn rounded-xl px-4 py-2 text-xs font-semibold bg-[#d4af37] text-black shadow-glow-gold";
+      renderGallery();
+    }
+
+    function renderVisThumbs() {
+      const thumbs = document.getElementById('visArtworkThumbs');
+      thumbs.innerHTML = ARTWORKS.map(item => `
+        <button onclick="selectVisArtwork(${item.id})" class="group relative aspect-[4/5] overflow-hidden rounded-xl border ${selectedVisArtwork.id === item.id ? 'border-[#d4af37] shadow-glow-gold' : 'border-white/10 opacity-70'}">
+          <img src="${item.image}" class="h-full w-full object-cover">
+          <div class="absolute inset-x-0 bottom-0 bg-black/80 p-1 text-[10px] font-semibold text-white truncate text-center">${item.title}</div>
+        </button>
+      `).join('');
+    }
+
+    function selectVisArtwork(id) {
+      selectedVisArtwork = ARTWORKS[id];
+      document.getElementById('visArtworkImg').src = selectedVisArtwork.image;
+      document.getElementById('visTitleLabel').innerText = selectedVisArtwork.title;
+      document.getElementById('visDimLabel').innerText = selectedVisArtwork.dimensions;
+      renderVisThumbs();
+    }
+
+    function setWallTheme(theme) {
+      const stage = document.getElementById('visWallStage');
+      if (theme === 'dark') stage.className = "relative flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-[#12141c] to-[#07080b] transition-colors duration-500";
+      if (theme === 'grey') stage.className = "relative flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-[#2a2d36] to-[#1a1c23] transition-colors duration-500";
+      if (theme === 'emerald') stage.className = "relative flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-[#18201a] to-[#0a0f0b] transition-colors duration-500";
+      if (theme === 'brick') stage.className = "relative flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-[#2b1f1a] to-[#150f0d] transition-colors duration-500";
+    }
+
+    async function calculateValuation(e) {
+      e.preventDefault();
+      const medium = document.getElementById('valMedium').value;
+      const style = document.getElementById('valStyle').value;
+      const width = Number(document.getElementById('valWidth').value);
+      const height = Number(document.getElementById('valHeight').value);
+      const exhibitions = Number(document.getElementById('valExhibitions').value);
+
+      const area = width * height;
+      const mMult = medium === 'Oil' ? 1.75 : 1.35;
+      const sMult = style === 'Abstract' ? 1.5 : 1.4;
+      const est = Math.ceil((area * 1.85 * mMult * sMult * (1 + exhibitions * 0.08) * 1.15) / 50) * 50;
+
+      const container = document.getElementById('valResultContainer');
+      container.innerHTML = `
+        <div class="space-y-4">
+          <span class="text-[10px] font-bold uppercase text-emerald-400 tracking-wider">FastAPI Algorithmic Valuation Output</span>
+          <div>
+            <p class="font-serif text-4xl font-extrabold text-gold-gradient">$${est.toLocaleString()} USD</p>
+            <p class="text-xs text-slate-400 mt-1">Range: $${Math.floor(est * 0.88).toLocaleString()} – $${Math.ceil(est * 1.18).toLocaleString()}</p>
+          </div>
+          <div class="rounded-xl border border-[#d4af37]/30 bg-[#0c0e14] p-3 text-xs text-slate-300 space-y-1">
+            <p>✔ Surface area of ${area} sq inches calculated.</p>
+            <p>✔ ${medium} medium commands premium market liquidity.</p>
+            <p>✔ ${exhibitions} solo/group exhibitions add strong artist authority.</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function openModalHtml(html) {
+      const overlay = document.getElementById('modalOverlay');
+      const content = document.getElementById('modalContent');
+      content.innerHTML = html;
+      overlay.classList.remove('hidden');
+      overlay.classList.add('flex');
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      const overlay = document.getElementById('modalOverlay');
+      overlay.classList.add('hidden');
+      overlay.classList.remove('flex');
+    }
+
+    function openArtworkDetailModal(id) {
+      const art = ARTWORKS[id];
+      openModalHtml(`
+        <div class="space-y-6">
+          <div class="flex justify-between items-center border-b border-white/10 pb-4">
+            <h3 class="font-serif text-xl font-bold text-white">${art.title}</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="h-5 w-5"></i></button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <img src="${art.image}" class="rounded-2xl border border-white/10 object-cover w-full aspect-[4/5]">
+            <div class="space-y-4 text-xs text-slate-300">
+              <p class="text-[#d4af37] font-semibold">${art.artist} • ${art.medium} (${art.year})</p>
+              <p>${art.desc}</p>
+              <div class="border-t border-white/10 pt-3">
+                <span class="text-slate-400">Cryptographic Certificate:</span>
+                <code class="text-emerald-400 font-mono block mt-1">${art.cert}</code>
+              </div>
+              <div class="pt-2">
+                <span class="text-xs text-slate-400 uppercase">Price</span>
+                <p class="font-serif text-2xl font-bold text-gold-gradient">$${art.price.toLocaleString()}</p>
+              </div>
+              <button onclick="alert('Acquisition request registered for ${art.title}!')" class="w-full rounded-xl bg-gradient-to-r from-[#d4af37] to-[#b87333] py-3 text-xs font-bold text-black uppercase">Acquire Painting</button>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    function openRoomVisualizerModal(id) {
+      const art = ARTWORKS[id];
+      openModalHtml(`
+        <div class="space-y-4">
+          <div class="flex justify-between items-center border-b border-white/10 pb-3">
+            <h3 class="font-serif text-lg font-bold text-white">Living Room Wall Preview</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="h-5 w-5"></i></button>
+          </div>
+          <div class="relative h-96 rounded-2xl bg-gradient-to-b from-[#12141c] to-[#07080b] flex flex-col items-center justify-center p-4">
+            <div class="canvas-frame w-56">
+              <img src="${art.image}" class="w-full rounded-sm">
+            </div>
+            <div class="mt-6 w-72 h-16 rounded-t-2xl bg-[#1e2330] flex items-center justify-center text-[10px] text-slate-400">90" Designer Sofa</div>
+          </div>
+        </div>
+      `);
+    }
+
+    function openAuthModal() {
+      openModalHtml(`
+        <div class="text-center space-y-4 py-4">
+          <div class="h-12 w-12 rounded-full bg-[#d4af37]/20 text-[#d4af37] flex items-center justify-center mx-auto">
+            <i data-lucide="shield-check" class="h-6 w-6"></i>
+          </div>
+          <h3 class="font-serif text-xl font-bold text-white">Sign In with Google (NextAuth)</h3>
+          <p class="text-xs text-slate-400 max-w-sm mx-auto">Configured with Google OAuth Client ID <code>619295624834-...apps.googleusercontent.com</code>.</p>
+          <button onclick="document.getElementById('userAuthLabel').innerText='Collector Account (Active)'; closeModal();" class="rounded-xl bg-[#d4af37] px-6 py-2.5 text-xs font-bold text-black uppercase">Simulate Google Auth Login</button>
+        </div>
+      `);
+    }
+
+    function openSellModal() {
+      openModalHtml(`
+        <div class="space-y-4">
+          <div class="flex justify-between items-center border-b border-white/10 pb-3">
+            <h3 class="font-serif text-lg font-bold text-white">Sell Artwork Portal</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="h-5 w-5"></i></button>
+          </div>
+          <form onsubmit="event.preventDefault(); alert('Artwork listed on Supabase!'); closeModal();" class="space-y-3 text-xs">
+            <input type="text" placeholder="Painting Title" required class="w-full rounded-xl border border-white/10 bg-[#12151f] p-2.5 text-white">
+            <input type="text" placeholder="Artist Name" required class="w-full rounded-xl border border-white/10 bg-[#12151f] p-2.5 text-white">
+            <input type="number" placeholder="Price (USD)" required class="w-full rounded-xl border border-white/10 bg-[#12151f] p-2.5 text-white">
+            <button type="submit" class="w-full rounded-xl bg-[#d4af37] p-3 font-bold text-black uppercase">Submit Masterwork</button>
+          </form>
+        </div>
+      `);
+    }
+
+    function openCartModal() {
+      openModalHtml(`
+        <div class="space-y-4">
+          <div class="flex justify-between items-center border-b border-white/10 pb-3">
+            <h3 class="font-serif text-lg font-bold text-white">Collector Shopping Bag</h3>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="h-5 w-5"></i></button>
+          </div>
+          <div class="flex items-center space-x-3 rounded-xl border border-white/10 bg-[#12151f] p-3 text-xs">
+            <img src="./frontend/public/artworks/art1.jpg" class="h-12 w-12 rounded-lg object-cover">
+            <div class="flex-1">
+              <p class="font-bold text-white">Celestial Nebulae & Burnished Gold</p>
+              <p class="text-slate-400">Evelyn Thorne • 48 x 36 in</p>
+            </div>
+            <span class="font-serif text-sm font-bold text-[#d4af37]">$8,400</span>
+          </div>
+          <button onclick="alert('Proceeding to Checkout!'); closeModal();" class="w-full rounded-xl bg-gradient-to-r from-[#d4af37] to-[#b87333] p-3 text-xs font-bold text-black uppercase">Checkout Now</button>
+        </div>
+      `);
+    }
+
+    // Initialize
+    window.onload = () => {
+      renderGallery();
+      renderVisThumbs();
+      calculateValuation({ preventDefault: () => {} });
+      lucide.createIcons();
+    };
+  </script>
+</body>
+</html>
